@@ -9,34 +9,17 @@ import (
 	// "reflect"
 )
 
-func printJson(alert *alerts.Alert) {
-	e, err := json.Marshal(alert)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    fmt.Println(string(e))
-}
-
-
-// Build an alert execution engine that:
-// - 1. Queries for alerts using the query_alerts API and execute them at the specified interval // Done
-// - 2. Alerts will not change over time, so only need to be loaded once at start // done
-// - 3. The basic alert engine will send notifications whenever it sees a value that exceeds the critical threshold. (Done)
-// - 4. Add support for repeat intervals, so that if an alert is continuously firing it will only re-notify after the repeat interval. (done)
-// - 5. Incorporate using the warn threshold in the alerting engine - now an alert can go between states PASS <-> WARN <-> CRITICAL <-> PASS. (done)
-
-const (
-	PassThreshold = 50
-	WarnThreshold = 100
-	CriticalThreshold = 200
-)
-
 type AlertState string
 const (
 	StatePass AlertState = "PASS"
 	StateWarn AlertState = "WARN"
 	StateCritical AlertState = "CRITICAL"
+)
+
+const (
+	PassThreshold = 50
+	WarnThreshold = 100
+	CriticalThreshold = 200
 )
 
 const MaxThresholdVal = 200
@@ -50,9 +33,15 @@ type alertInfo struct {
 
 var alertMap = make(map[string]alertInfo)
 
+func printJson(alert *alerts.Alert) {
+	e, err := json.Marshal(alert)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    fmt.Println(string(e))
+}
 
-// TODO: make it singleton
-// note: client := alerts.NewClient("") does not work outside.
 var client alerts.Client
 func getClientInstance() alerts.Client {
 	if client == nil {
