@@ -23,8 +23,8 @@ func printJson(alert *alerts.Alert) {
 // - 1. Queries for alerts using the query_alerts API and execute them at the specified interval // Done
 // - 2. Alerts will not change over time, so only need to be loaded once at start // done
 // - 3. The basic alert engine will send notifications whenever it sees a value that exceeds the critical threshold. (Done)
-// - 4. Add support for repeat intervals, so that if an alert is continuously firing it will only re-notify after the repeat interval. (In progress)
-// - 5. Incorporate using the warn threshold in the alerting engine - now an alert can go between states PASS <-> WARN <-> CRITICAL <-> PASS. (Partially done)
+// - 4. Add support for repeat intervals, so that if an alert is continuously firing it will only re-notify after the repeat interval. (done)
+// - 5. Incorporate using the warn threshold in the alerting engine - now an alert can go between states PASS <-> WARN <-> CRITICAL <-> PASS. (done)
 
 const (
 	PassThreshold = 50
@@ -48,7 +48,8 @@ type alertInfo struct {
 	state AlertState
 }
 
-// const RepeatIntervals = 10
+var alertMap = make(map[string]alertInfo)
+
 
 // TODO: make it singleton
 // note: client := alerts.NewClient("") does not work outside.
@@ -75,7 +76,7 @@ func passBeteenStates(passCh <-chan string, warnCh <-chan string, criticalCh <-c
 	}
 }
 
-func getAlertState(val int) AlertState {
+func getAlertState(val float32) AlertState {
 	if val >= CriticalThreshold {
 		return StateCritical
 	} else if val >= WarnThreshold {
@@ -94,8 +95,8 @@ func processAlerts(alerts []*alerts.Alert) {
 	passCh := make(chan string)
 	warnCh := make(chan string)
 	criticalCh := make(chan string)
-	// alertMap := make(map[string]alertInfo)
 
+	fmt.Println(alertMap)
 	go passBeteenStates(passCh, warnCh, criticalCh)
 
 	for _, alert := range alerts {
@@ -112,22 +113,34 @@ func processAlerts(alerts []*alerts.Alert) {
 
 			// Add to alertMap
 
-			// val, ok := alertMap[alertName]
+			entry, ok := alertMap[alertName]
 
-			// if ok {
-			// 	alertInfo := alertMap[alertName]
-			// 	alertInfo.times = alertInfo.times + 1
-			// 	alertInfo.state = getAlertState(warnVal)
-			// } else {
-			// 	alertMap[alertName] = alertInfo{
-			// 		times = 1
-			// 		repeatIntervalSec = alert.RepeatIntervalSecs
-			// 		state = getAlertState(warnVal)
-			// 	}
-			// }
-			// alertInfo[alertName].lastNotifyTime = time.Now()
+			if ok {
+				entry.times = entry.times + 1
+			} else {
+				entry = alertInfo{
+					times: 1,
+					repeatIntervalSec: alert.RepeatIntervalSecs,
+					lastNotifyTime: time.Time{},
+				}	
+			}
+			// change it to warnVal
+			entry.state = getAlertState(criticalVal)
 
-			notify(name, msg)
+			hasTimeElapsed := false
+			if  entry.lastNotifyTime.IsZero() == false {
+				duration :=  time.Duration(entry.repeatIntervalSec) * time.Second
+				totalTime := entry.lastNotifyTime.Add(duration)
+				hasTimeElapsed = totalTime.Before(time.Now())
+			}
+			// if state and timeElapsed but first time notification
+			if (entry.state == StateCritical && (hasTimeElapsed ||  entry.lastNotifyTime.IsZero())) {
+				fmt.Println("*********** after repeat interval **********")
+				notify(name, msg)
+				entry.lastNotifyTime = time.Now()
+			}
+			// reassign the copy
+			alertMap[alertName] = entry
 		}
 
 		if warnVal >= CriticalThreshold {

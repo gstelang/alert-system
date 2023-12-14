@@ -20,7 +20,7 @@ func (p DefaultPoller) Poll(
 	pollingFunc fn,
 ) {
 	ticker := time.NewTicker(tickRate).C
-	exitTimer := time.NewTicker(60 * time.Second).C
+	exitTimer := time.NewTicker(200 * time.Second).C
 
 	for {
 		select {
