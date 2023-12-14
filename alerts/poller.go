@@ -20,12 +20,15 @@ func (p DefaultPoller) Poll(
 	pollingFunc fn,
 ) {
 	ticker := time.NewTicker(tickRate).C
+	exitTimer := time.NewTicker(12 * time.Second).C
 
 	for {
 		select {
-			case <-ticker:
-				fmt.Println("************************ Polled after 5 seconds***********************")
+			case <- ticker:
+				fmt.Println("************************ Polled ***********************")
 				pollingFunc(ctx)
+			case <- exitTimer:
+				return	
 			default:
 				break
 		}

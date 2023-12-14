@@ -45,34 +45,55 @@ func queryAlerts(ctx context.Context) {
 		fmt.Println("here - QueryAlerts")
 		for _, alert := range alerts {
 			printJson(alert)
-			fmt.Printf("%v\n", alert)	
+			// fmt.Printf("%v\n", alert)	
 		}
+	}
+}
+
+// Queries a particular one.
+func queryByName(name string) {
+	value, err := client.Query(context.Background(), name)
+	if err != nil {
+		fmt.Printf("error resolving: %v\n", err)
+	} else {
+		fmt.Println("query - ", name)
+		fmt.Printf("value queried: %v\n", value)
+	}
+}
+
+func notify(name string, msg string) {
+	err := client.Notify(context.Background(), name, msg)
+	if err != nil {
+		fmt.Println("notify - ", name)
+		fmt.Printf("error notifying: %v\n", err)
+	}
+}
+
+func resolve(name string) {
+	err := client.Resolve(context.Background(), name)
+	if err != nil {
+		fmt.Println("resolve - ", name)
+		fmt.Printf("error resolving: %v\n", err)
 	}
 }
 
 func main() {
 	const pollerInterval = 5 * time.Second
-	ctx := context.Background()
 	alertPoller := alerts.DefaultPoller{}
-	alertPoller.Poll(ctx, pollerInterval, queryAlerts)
 
-	value, err := client.Query(context.Background(), "test-query-1")
-	if err != nil {
-		fmt.Printf("error resolving: %v\n", err)
-	} else {
-		fmt.Println("query - test-query-1")
-		fmt.Printf("value queried: %v\n", value)
-	}
+	// Poll for notifications
+	alertPoller.Poll(context.Background(), pollerInterval, queryAlerts)
 
-	err = client.Notify(context.Background(), "alert-1", "test-message")
-	if err != nil {
-		fmt.Println("notify - test-query-1")
-		fmt.Printf("error notifying: %v\n", err)
-	}
+	queryName := "test-query-1"
+	alertName := "alert-1"
+	notifyMessage := "test-message"
 
-	err = client.Resolve(context.Background(), "alert-1")
-	if err != nil {
-		fmt.Println("resolve - test-query-1")
-		fmt.Printf("error resolving: %v\n", err)
-	}
+	// Query by name
+	queryByName(queryName)
+
+	// Notification
+	notify(alertName, notifyMessage)
+
+	// Resolve
+	resolve(alertName)
 }
