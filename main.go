@@ -2,47 +2,49 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"github.com/gstelang/alert-system/alerts"
 	"time"
 	// "reflect"
 )
 
 type AlertState string
+
 const (
-	StatePass AlertState = "PASS"
-	StateWarn AlertState = "WARN"
+	StatePass     AlertState = "PASS"
+	StateWarn     AlertState = "WARN"
 	StateCritical AlertState = "CRITICAL"
 )
 
 const (
-	PassThreshold = 50
-	WarnThreshold = 100
+	PassThreshold     = 50
+	WarnThreshold     = 100
 	CriticalThreshold = 200
 )
 
 const MaxThresholdVal = 200
 
 type alertInfo struct {
-	times int
-	lastNotifyTime time.Time
+	times             int
+	lastNotifyTime    time.Time
 	repeatIntervalSec int
-	state AlertState
+	state             AlertState
 }
 
 var alertMap = make(map[string]alertInfo)
 
 func printJson(alert *alerts.Alert) {
 	e, err := json.Marshal(alert)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    fmt.Println(string(e))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(e))
 }
 
 var client alerts.Client
+
 func getClientInstance() alerts.Client {
 	if client == nil {
 		client = alerts.NewClient("")
@@ -53,11 +55,11 @@ func getClientInstance() alerts.Client {
 func passBeteenStates(passCh <-chan string, warnCh <-chan string, criticalCh <-chan string) {
 	for {
 		select {
-		case val := <- passCh:
+		case val := <-passCh:
 			fmt.Println("pass channel", val)
-		case val := <- warnCh:
+		case val := <-warnCh:
 			fmt.Println("warn channel", val)
-		case val := <- criticalCh:
+		case val := <-criticalCh:
 			fmt.Println("critical channel", val)
 		default:
 			// fmt.Println("do nothing")
@@ -73,7 +75,7 @@ func getAlertState(val float32) AlertState {
 	} else if val >= PassThreshold {
 		return StatePass
 	} else {
-		// TODO: temporary to satisfy go compiler 
+		// TODO: temporary to satisfy go compiler
 		// update as per business logic
 		return StatePass
 	}
@@ -96,7 +98,7 @@ func processAlerts(alerts []*alerts.Alert) {
 		warnVal := alert.Warn.Value
 		alertName := alert.Name
 
-		if criticalVal == MaxThresholdVal { // TODO: adjust  
+		if criticalVal == MaxThresholdVal { // TODO: adjust
 			name := alert.Name
 			msg := "Critical threshold exceeded"
 
@@ -108,22 +110,22 @@ func processAlerts(alerts []*alerts.Alert) {
 				entry.times = entry.times + 1
 			} else {
 				entry = alertInfo{
-					times: 1,
+					times:             1,
 					repeatIntervalSec: alert.RepeatIntervalSecs,
-					lastNotifyTime: time.Time{},
-				}	
+					lastNotifyTime:    time.Time{},
+				}
 			}
 			// change it to warnVal
 			entry.state = getAlertState(criticalVal)
 
 			hasTimeElapsed := false
-			if  entry.lastNotifyTime.IsZero() == false {
-				duration :=  time.Duration(entry.repeatIntervalSec) * time.Second
+			if entry.lastNotifyTime.IsZero() == false {
+				duration := time.Duration(entry.repeatIntervalSec) * time.Second
 				totalTime := entry.lastNotifyTime.Add(duration)
 				hasTimeElapsed = totalTime.Before(time.Now())
 			}
 			// if state and timeElapsed but first time notification
-			if (entry.state == StateCritical && (hasTimeElapsed ||  entry.lastNotifyTime.IsZero())) {
+			if entry.state == StateCritical && (hasTimeElapsed || entry.lastNotifyTime.IsZero()) {
 				fmt.Println("*********** after repeat interval **********")
 				notify(name, msg)
 				entry.lastNotifyTime = time.Now()

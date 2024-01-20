@@ -1,9 +1,9 @@
 package alerts
 
 import (
-	"fmt"
-    "time"
 	"context"
+	"fmt"
+	"time"
 )
 
 type fn func(context.Context)
@@ -24,14 +24,13 @@ func (p DefaultPoller) Poll(
 
 	for {
 		select {
-			case <- ticker:
-				fmt.Println("************************ Polled ***********************")
-				pollingFunc(ctx)
-			case <- exitTimer:
-				return	
-			default:
-				break
+		case <-ticker:
+			fmt.Println("************************ Polled ***********************")
+			pollingFunc(ctx)
+		case <-exitTimer:
+			return
+		default:
+			break
 		}
 	}
 }
-
