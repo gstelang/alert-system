@@ -1,6 +1,7 @@
 # alert-system
 
 ```
+If you want to run the fake client: 
 docker run -p 9001:9001 quay.io/chronosphereiotest/interview-alerts-engine:latest
 ```
 
